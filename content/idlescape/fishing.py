@@ -207,8 +207,10 @@ try:
     from numba import jit
 except ImportError:
     def jit(*args, **kwargs):
-        return lambda f: f
-@jit
+        def decorator(func):
+            return func
+        return decorator
+@jit()
 def _calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishing_level, bait_power, trials):
     total_resources = 0
     for i in range(trials):
@@ -227,8 +229,7 @@ def _calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishin
         total_resources += np.floor(np.random.rand() * delta + small)
     return total_resources / trials
 
-
-@jit
+@jit()
 def _average_tries_to_finish_node_jit_fishing(base_chance, zone_level, min_base, max_base,
                                               fishing_level, bait_power, fishing, trials):
     total_tries = 0
