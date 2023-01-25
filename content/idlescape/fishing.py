@@ -70,7 +70,7 @@ class Fishing(Gathering):
             frequency = (loot.frequency + self._bonus_rarity()) * (1 + self._effective_level() / 360)
             frequency = min(frequency, loot.max_frequency)
             if loot.item_class == "fiber":
-                frequency = frequency * (1 + self.player.enchantments.get('Fiber Finder', 0)*0.25)
+                frequency = frequency * (1 + self.player.enchantments.get('Fiber Finder', 0) * 0.25)
             boosted_frequency = max(0, frequency)
             frequency_dict[idd] = max(0, frequency)
             boosted_frequency_dict[idd] = boosted_frequency
@@ -205,39 +205,66 @@ Gathering.register(Fishing)
 # Numba JITFishing section
 try:
     from numba import jit
+
+
+    @jit()
+    def _calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishing_level, bait_power, trials):
+        total_resources = 0
+        for i in range(trials):
+            maximum_node_size = np.floor(max_base + (np.random.rand() * (fishing_level - zone_level) / 8) + np.floor(
+                np.random.rand() * bait_power / 20))
+            minimum_node_size = np.floor(min_base + (np.random.rand() * (fishing_level - zone_level) / 6) + np.floor(
+                np.random.rand() * bait_power / 10))
+
+            lucky_chance = 0.05 + (bait_power / 2000)
+            if np.random.rand() <= lucky_chance:
+                minimum_node_size *= 1.5
+                maximum_node_size *= 3.0
+
+            delta = abs(maximum_node_size - minimum_node_size)
+            small = min(maximum_node_size, minimum_node_size)
+            total_resources += np.floor(np.random.rand() * delta + small)
+        return total_resources / trials
+
 except ImportError:
     def jit(*args, **kwargs):
         def decorator(func):
             return func
+
         return decorator
-@jit()
-def _calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishing_level, bait_power, trials):
-    total_resources = 0
-    for i in range(trials):
-        maximum_node_size = np.floor(max_base + (np.random.rand() * (fishing_level - zone_level) / 8) + np.floor(
-            np.random.rand() * bait_power / 20))
-        minimum_node_size = np.floor(min_base + (np.random.rand() * (fishing_level - zone_level) / 6) + np.floor(
-            np.random.rand() * bait_power / 10))
+
+
+    def _calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishing_level, bait_power, trials):
+        maximum_node_size = np.floor(max_base + (np.random.rand(trials) * (fishing_level - zone_level) / 8) + np.floor(
+            np.random.rand(trials) * bait_power / 20))
+        minimum_node_size = np.floor(min_base + (np.random.rand(trials) * (fishing_level - zone_level) / 6) + np.floor(
+            np.random.rand(trials) * bait_power / 10))
 
         lucky_chance = 0.05 + (bait_power / 2000)
-        if np.random.rand() <= lucky_chance:
-            minimum_node_size *= 1.5
-            maximum_node_size *= 3.0
+        lucky_rolls = np.random.rand(trials) <= lucky_chance
+        minimum_node_size = minimum_node_size * (1 + 0.5 * lucky_rolls)
+        maximum_node_size = maximum_node_size * (1 + 2.0 * lucky_rolls)
 
         delta = abs(maximum_node_size - minimum_node_size)
-        small = min(maximum_node_size, minimum_node_size)
-        total_resources += np.floor(np.random.rand() * delta + small)
-    return total_resources / trials
+        small = np.min([maximum_node_size, minimum_node_size], axis=0)
+        total_resources = sum(np.floor(np.random.rand(trials) * delta + small))
+        return total_resources / trials
 
-@jit()
-def _average_tries_to_finish_node_jit_fishing(base_chance, zone_level, min_base, max_base,
-                                              fishing_level, bait_power, fishing, trials):
-    total_tries = 0
-    for i in range(trials):
-        node_resources = _calculate_node_resources_jit_fishing(zone_level, min_base,
-                                                               max_base, fishing_level, bait_power, 1)
-        while node_resources > 0:
-            total_tries += 1
-            if np.random.rand() < (base_chance + fishing * 0.025 + node_resources / 48):
-                node_resources -= 1
-    return total_tries / trials
+
+@jit
+def _average_tries_to_finish_node_jit_fishing(base_chance, zone_level, min_base, max_base, fishing_level, bait_power,
+                                              fishing, trials):
+    node_resources = np.array(
+        [int(_calculate_node_resources_jit_fishing(zone_level, min_base, max_base, fishing_level, bait_power, 1)) for
+         _ in range(trials)])
+    min_node_count = min(node_resources)
+    max_node_count = max(node_resources)
+    node_average = []
+    for total_node_resources in range(min_node_count, max_node_count + 1):
+        total_tries_sub = 0.0
+        for n_res in range(total_node_resources, 0, -1):
+            never_tell_me_the_odds = min(1.0, base_chance + fishing * 0.025 + n_res / 48)
+            total_tries_sub += 1 / never_tell_me_the_odds
+        node_average.append(total_tries_sub)
+    node_average = np.array(node_average)
+    return np.mean(node_average[(node_resources - min_node_count)])
