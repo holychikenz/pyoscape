@@ -1,9 +1,12 @@
+from abc import ABC
+
 import numpy as np
 from .gathering import *
 from .character import *
 
 
-class Foraging(Gathering):
+class Foraging(Gathering, ABC):
+    player = None
 
     def __init__(self, character, location_data, **kwargs):
         self.player = character

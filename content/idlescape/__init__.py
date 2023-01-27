@@ -5,3 +5,4 @@ from .foraging import *
 from .mining import *
 from .sequencer import *
 from .combat import *
+from .smithing import *

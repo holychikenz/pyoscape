@@ -4,6 +4,8 @@ import numpy as np
 
 
 class Fishing(Gathering):
+    player = None
+
     def __init__(self, character, location_data, **kwargs):
         self.player = character
         self.items = self.player.item_data

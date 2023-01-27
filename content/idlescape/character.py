@@ -16,13 +16,17 @@ class Character:
         self.reel_power = kwargs.get("reel_power", 0)
         self.bonus_rarity = kwargs.get("bonus_rarity", 0)
         # Mining
-        self.mining_level = kwargs.get("mining_level", 0)
+        self.mining_level = kwargs.get("mining_level", 1)
         self.mining_bonus = kwargs.get("mining_bonus", 0)
         self.mining_set_bonus = kwargs.get("mining_set_bonus", 0.0)
         # Foraging
-        self.foraging_level = kwargs.get("foraging_level", 0)
+        self.foraging_level = kwargs.get("foraging_level", 1)
         self.foraging_bonus = kwargs.get("foraging_bonus", 0)
         self.foraging_set_bonus = kwargs.get("foraging_set_bonus", 0.0)
+        # Smithing
+        self.smithing_level = kwargs.get("smithing_level", 1)
+        self.smithing_mastery = kwargs.get("smithing_mastery", 0)
+        self.smithing_bonus = kwargs.get("smithing_bonus", 0)
         # Enchantments
         self.enchantments = kwargs.get("enchantments", dict())
 

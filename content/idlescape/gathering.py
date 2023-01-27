@@ -5,6 +5,15 @@ import pandas as pd
 
 
 class Gathering(ABC):
+    @property
+    @abstractmethod
+    def player(self):
+        pass
+
+    @property
+    def sh_table(self):
+        return dict()
+
     @abstractmethod
     def get_maximum_experience(self):
         pass
@@ -59,13 +68,28 @@ class Gathering(ABC):
 
         items = dict()
         total_actions = 0
+        gathering = self.player.enchantments.get("gathering", 0) * 0.10
+        empowered_gathering = self.player.enchantments.get("empoweredGathering", 0) * 0.10
+        total_gathering = 1 - (1 - gathering) * (1 - empowered_gathering)
+        superheat = self.player.enchantments.get("superheat", 0) * 0.01
+        empowered_superheat = self.player.enchantments.get("empoweredSuperheat", 0) * 0.01
+        total_superheat = 1 - (1 - superheat) * (1 - empowered_superheat)
         for (name, rate) in node_rates.items():
             avg_size = node_sizes[name]
             total_actions += node_actions[name] * rate
             loot_rates = self._loot_rates(location.nodes[name])
             for (itemid, loot) in location.nodes[name].loot.items():
-                base_rate = items.get(itemid, 0) + loot_rates[itemid] * avg_size * rate * action_rate
+                item_node_rate = loot_rates[itemid] * avg_size * rate * action_rate
+                base_rate = items.get(itemid, 0) + item_node_rate * (1 + total_gathering)
                 items[itemid] = base_rate
+                if total_superheat > 0:
+                    if itemid in self.sh_table:
+                        sh_id = self.sh_table[itemid]
+                        sh_count = item_node_rate * (1 + total_superheat)
+                        items[sh_id] = items.get(sh_id, 0) + sh_count
+                        items[itemid] = items.get(itemid, 0) - sh_count
+        if gathering > 0:
+            items[517] = items.get(517, 0) - gathering * action_rate * 0.15 * total_actions * (1 - empowered_gathering)
         if key == 'name':
             return pd.Series({self.items[str(k)]['name']: v / total_actions for (k, v) in items.items()})
         else:
