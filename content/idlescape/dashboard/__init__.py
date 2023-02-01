@@ -1,0 +1,1 @@
+from .interactive_character import InteractiveCharacter

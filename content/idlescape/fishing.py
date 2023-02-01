@@ -40,16 +40,34 @@ class Fishing(Gathering):
         return max(zone_xp_list)
 
     def _effective_level(self):
-        return self.player.fishing_level + self.player.fishing_bonus * (1 + self.player.fishing_set_bonus)
+        set_bonus = 1 + self.player.fishing_set_bonus
+        level = self.player.fishing_level
+        gear_base = self.player.fishing_bonus
+        bait = self.player.bait_fishing_bonus * (1 + self.player.enchantments.get('deadliestCatch', 0) * 0.05)
+        return level + bait + gear_base * set_bonus
 
     def _bait_power(self):
-        return self.player.bait_power * (1 + self.player.fishing_set_bonus)
+        set_bonus = 1 + self.player.fishing_set_bonus
+        gear_base = self.player.bait_power
+        gear_enchant = self.player.enchantments.get('pungentBait', 0) * 3 \
+                       - self.player.enchantments.get('fishingMagnetism') * 2
+        bait = self.player.bait_bait_power * (1 + self.player.enchantments.get('deadliestCatch', 0) * 0.05)
+        return (gear_base + gear_enchant) * set_bonus + bait
 
     def _bonus_rarity(self):
-        return self.player.bonus_rarity * (1 + self.player.fishing_set_bonus)
+        set_bonus = 1 + self.player.fishing_set_bonus
+        gear_base = self.player.bonus_rarity
+        gear_enchant = self.player.enchantments.get('fishingMagnetism') * 2
+        bait = self.player.bait_bonus_rarity * (1 + self.player.enchantments.get('deadliestCatch', 0) * 0.05)
+        return (gear_base + gear_enchant) * set_bonus + bait
 
     def _reel_power(self):
-        return self.player.reel_power * (1 + self.player.fishing_set_bonus)
+        set_bonus = 1 + self.player.fishing_set_bonus
+        gear_base = self.player.reel_power
+        gear_enchant = self.player.enchantments.get('reinforcedLine', 0) * 3 \
+                       - self.player.enchantments.get('fishingMagnetism') * 2
+        bait = self.player.bait_reel_power * (1 + self.player.enchantments.get('deadliestCatch', 0) * 0.05)
+        return (gear_base + gear_enchant) * set_bonus + bait
 
     def _node_rates(self, location):
         frequency_dict = dict()
@@ -72,7 +90,7 @@ class Fishing(Gathering):
             frequency = (loot.frequency + self._bonus_rarity()) * (1 + self._effective_level() / 360)
             frequency = min(frequency, loot.max_frequency)
             if loot.item_class == "fiber":
-                frequency = frequency * (1 + self.player.enchantments.get('Fiber Finder', 0) * 0.25)
+                frequency = frequency * (1 + self.player.enchantments.get('fiberFinder', 0) * 0.25)
             boosted_frequency = max(0, frequency)
             frequency_dict[idd] = max(0, frequency)
             boosted_frequency_dict[idd] = boosted_frequency
@@ -160,7 +178,7 @@ class Fishing(Gathering):
         node_actions = self._node_actions(location)
         haste = self.player.enchantments.get('haste', 0)
 
-        base_time = location.base_duration / 1000 * (1 - haste * 0.04)
+        base_time = location.base_duration / 1000 / (1 + haste * 0.04)
         node_search_time = max(1, base_time * 1.75 * (1 - (self._bait_power() / 400)))
         a_find = self._average_tries_to_find_node(location)
         loot_search_time = max(1, base_time / 1.25 * (200 / (self._reel_power() + 200)))
@@ -189,7 +207,7 @@ class Fishing(Gathering):
         node_actions = self._node_actions(location)
         haste = self.player.enchantments.get('haste', 0)
 
-        base_time = location.base_duration / 1000 * (1 - haste * 0.04)
+        base_time = location.base_duration / 1000 / (1 + haste * 0.04)
         node_search_time = max(1, base_time * 1.75 * (1 - (self._bait_power() / 400)))
         a_find = self._average_tries_to_find_node(location)
         loot_search_time = max(1, base_time / 1.25 * (200 / (self._reel_power() + 200)))

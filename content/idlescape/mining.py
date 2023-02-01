@@ -5,6 +5,18 @@ from .character import *
 
 class Mining(Gathering):
     player = None
+    sh_table = {
+        101: 201,  # Copper
+        102: 201,  # Tin
+        103: 202,  # Iron
+        104: 203,  # Gold
+        105: 204,  # Mithril
+        106: 205,  # Adamantite
+        107: 206,  # Runite
+        110: 3001,  # Sand
+        114: 207,  # Stygian
+        115: 208,  # Void
+    }
 
     def __init__(self, character, location_data, **kwargs):
         self.player = character
@@ -46,7 +58,7 @@ class Mining(Gathering):
         if self.alt_experience is not None:
             return self.alt_experience.get(location_name, 0) * self.zone_action_rate(location_name)
         haste = self.player.enchantments.get('haste', 0)
-        rate_modifier = (self._effective_level() + 99) / 100 / (1 - haste * 0.04)
+        rate_modifier = (self._effective_level() + 99) / 100 * (1 + haste * 0.04)
         item_hist = self.location_item_histogram(location_name, key='id')
         summed_weighted_xp = 0
         for (k, v) in item_hist.items():
@@ -60,7 +72,7 @@ class Mining(Gathering):
         if location.level > self.player.mining_level:
             return 0
         haste = self.player.enchantments.get('haste', 0)
-        rate_modifier = (self._effective_level() + 99) / 100 / (1 - haste * 0.04)
+        rate_modifier = (self._effective_level() + 99) / 100 * (1 + haste * 0.04)
         return rate_modifier * 3600000 / location.base_duration
 
 

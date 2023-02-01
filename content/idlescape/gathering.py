@@ -49,7 +49,7 @@ class Gathering(ABC):
         pass
 
     def list_of_actions(self):
-        return self.locations.keys()
+        return list(self.locations.keys())
 
     def get_location_by_name(self, name):
         if name not in self.list_of_actions():
@@ -71,8 +71,8 @@ class Gathering(ABC):
         gathering = self.player.enchantments.get("gathering", 0) * 0.10
         empowered_gathering = self.player.enchantments.get("empoweredGathering", 0) * 0.10
         total_gathering = 1 - (1 - gathering) * (1 - empowered_gathering)
-        superheat = self.player.enchantments.get("superheat", 0) * 0.01
-        empowered_superheat = self.player.enchantments.get("empoweredSuperheat", 0) * 0.01
+        superheat = self.player.enchantments.get("superheating", 0) * 0.01
+        empowered_superheat = self.player.enchantments.get("empoweredSuperheating", 0) * 0.01
         total_superheat = 1 - (1 - superheat) * (1 - empowered_superheat)
         for (name, rate) in node_rates.items():
             avg_size = node_sizes[name]
@@ -85,9 +85,11 @@ class Gathering(ABC):
                 if total_superheat > 0:
                     if itemid in self.sh_table:
                         sh_id = self.sh_table[itemid]
-                        sh_count = item_node_rate * (1 + total_superheat)
+                        sh_count = item_node_rate * total_superheat
                         items[sh_id] = items.get(sh_id, 0) + sh_count
                         items[itemid] = items.get(itemid, 0) - sh_count
+                        items[2] = items.get(2, 0) - sh_count * 1.5 \
+                                   * self.items[str(sh_id)].get('requiredResources', [{}])[0].get('2', 0)
         if gathering > 0:
             items[517] = items.get(517, 0) - gathering * action_rate * 0.15 * total_actions * (1 - empowered_gathering)
         if key == 'name':
@@ -172,7 +174,8 @@ def select_action_locations(datafile, item_data, action_type):
                     loot_min_amount = loot.get("minAmount", 1)
                     loot_max_amount = loot.get("maxAmount", loot_min_amount)
                     item_class = item_data[str(loot_id)].get("class", "")
-                    this_loot = NodeLoot(loot_id, loot_freq, loot_max_freq, loot_min_amount, loot_max_amount, item_class)
+                    this_loot = NodeLoot(loot_id, loot_freq, loot_max_freq, loot_min_amount, loot_max_amount,
+                                         item_class)
                     this_node.loot[loot["id"]] = this_loot
                 this_location.nodes[node["nodeID"]] = this_node
             results[v['name']] = this_location
